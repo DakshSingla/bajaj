@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
-// node-fetch fix for CommonJS
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -15,7 +14,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const EMAIL = process.env.OFFICIAL_EMAIL || "test@chitkara.edu.in";
 
-// ---------- Utility Functions ----------
+/* ---------- Math Utilities ---------- */
 
 function fibonacci(n) {
   const res = [];
@@ -29,10 +28,10 @@ function fibonacci(n) {
   return res;
 }
 
-function isPrime(num) {
-  if (num <= 1) return false;
-  for (let i = 2; i * i <= num; i++) {
-    if (num % i === 0) return false;
+function isPrime(n) {
+  if (n <= 1) return false;
+  for (let i = 2; i * i <= n; i++) {
+    if (n % i === 0) return false;
   }
   return true;
 }
@@ -46,9 +45,10 @@ function hcf(arr) {
 }
 
 function lcm(arr) {
-  const lcmTwo = (a, b) => (a * b) / gcd(a, b);
-  return arr.reduce((a, b) => lcmTwo(a, b));
+  return arr.reduce((a, b) => (a * b) / gcd(a, b));
 }
+
+/* ---------- AI (FIXED PROPERLY) ---------- */
 
 async function askAI(question) {
   const url =
@@ -65,20 +65,30 @@ async function askAI(question) {
 
   const data = await response.json();
 
-  const text = data?.candidates?.[0]?.content?.parts
-    ?.map(p => p.text)
-    ?.join(" ")
-    ?.trim();
+  if (data.error) {
+    console.error("Gemini Error:", data.error);
+    return "Error";
+  }
 
-  if (!text) return "Unknown";
+  const fullText =
+    data.candidates &&
+    data.candidates[0] &&
+    data.candidates[0].content &&
+    data.candidates[0].content.parts
+      .map(p => p.text)
+      .join(" ")
+      .trim();
 
-  return text
+  if (!fullText) return "Error";
+
+  // Extract a single clean answer
+  return fullText
     .replace(/[^a-zA-Z ]/g, " ")
     .trim()
     .split(/\s+/)[0];
 }
 
-// ---------- Routes ----------
+/* ---------- Routes ---------- */
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -95,7 +105,7 @@ app.post("/bfhl", async (req, res) => {
     if (keys.length !== 1) {
       return res.status(400).json({
         is_success: false,
-        error: "Exactly one key is required"
+        error: "Exactly one key required"
       });
     }
 
@@ -104,37 +114,27 @@ app.post("/bfhl", async (req, res) => {
 
     switch (key) {
       case "fibonacci":
-        if (!Number.isInteger(body.fibonacci) || body.fibonacci < 0)
-          throw new Error("Invalid fibonacci input");
         result = fibonacci(body.fibonacci);
         break;
 
       case "prime":
-        if (!Array.isArray(body.prime))
-          throw new Error("Invalid prime input");
         result = body.prime.filter(isPrime);
         break;
 
       case "lcm":
-        if (!Array.isArray(body.lcm))
-          throw new Error("Invalid lcm input");
         result = lcm(body.lcm);
         break;
 
       case "hcf":
-        if (!Array.isArray(body.hcf))
-          throw new Error("Invalid hcf input");
         result = hcf(body.hcf);
         break;
 
       case "AI":
-        if (typeof body.AI !== "string")
-          throw new Error("Invalid AI input");
         result = await askAI(body.AI);
         break;
 
       default:
-        throw new Error("Unknown key");
+        throw new Error("Invalid key");
     }
 
     res.status(200).json({
@@ -150,8 +150,8 @@ app.post("/bfhl", async (req, res) => {
   }
 });
 
-// ---------- Start Server ----------
+/* ---------- Start ---------- */
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running on port", PORT);
 });
