@@ -52,40 +52,38 @@ function lcm(arr) {
 
 async function askAI(question) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=` +
     process.env.GEMINI_API_KEY;
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: question }] }]
-    })
-  });
+  try {
+    const payload = {
+      prompt: {
+        text: question
+      },
+      temperature: 0.7,
+      candidateCount: 1
+    };
 
-  const data = await response.json();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  if (data.error) {
-    console.error("Gemini Error:", data.error);
-    return "Error";
+    const data = await response.json();
+
+    // Log the full response for debugging
+    console.log("Full AI API Response:", JSON.stringify(data, null, 2));
+
+    if (data && data.candidates && data.candidates.length > 0) {
+      return data.candidates[0].output || "Unknown";
+    } else {
+      throw new Error("Unexpected API response format");
+    }
+  } catch (error) {
+    console.error("Error calling AI API:", error);
+    return "Error: " + error.message;
   }
-
-  const fullText =
-    data.candidates &&
-    data.candidates[0] &&
-    data.candidates[0].content &&
-    data.candidates[0].content.parts
-      .map(p => p.text)
-      .join(" ")
-      .trim();
-
-  if (!fullText) return "Error";
-
-  // Extract a single clean answer
-  return fullText
-    .replace(/[^a-zA-Z ]/g, " ")
-    .trim()
-    .split(/\s+/)[0];
 }
 
 /* ---------- Routes ---------- */
