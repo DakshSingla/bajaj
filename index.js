@@ -8,8 +8,6 @@ const fetch = (...args) =>
 
 dotenv.config();
 
-console.log("Starting server...");
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -20,8 +18,9 @@ const EMAIL = process.env.OFFICIAL_EMAIL || "test@chitkara.edu.in";
 // ---------- Utility Functions ----------
 
 function fibonacci(n) {
-  if (n <= 0) return [];
-  const res = [0];
+  const res = [];
+  if (n <= 0) return res;
+  res.push(0);
   if (n === 1) return res;
   res.push(1);
   for (let i = 2; i < n; i++) {
@@ -53,7 +52,7 @@ function lcm(arr) {
 
 async function askAI(question) {
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=` +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   const response = await fetch(url, {
@@ -65,9 +64,18 @@ async function askAI(question) {
   });
 
   const data = await response.json();
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text?.split(" ")[0] || "Unknown"
-  );
+
+  const text = data?.candidates?.[0]?.content?.parts
+    ?.map(p => p.text)
+    ?.join(" ")
+    ?.trim();
+
+  if (!text) return "Unknown";
+
+  return text
+    .replace(/[^a-zA-Z ]/g, " ")
+    .trim()
+    .split(/\s+/)[0];
 }
 
 // ---------- Routes ----------
